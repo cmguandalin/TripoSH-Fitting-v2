@@ -57,8 +57,8 @@ pip install numpy scipy pyyaml argparse pocomc
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/pk-bk-analysis.git
-   cd pk-bk-analysis
+   git clone https://github.com/cmguandalin/TripoSH-Fitting-v2.git
+   cd TripoSH-Fitting-v2
    ```
 
 2. Install the required Python packages (see [Requirements](#requirements)).
