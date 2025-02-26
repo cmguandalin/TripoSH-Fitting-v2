@@ -1,0 +1,118 @@
+data_path: '/global/homes/c/cguandal/TripoSH-Fitting/data/LRG/z0.8/'
+
+data_files:
+    '0': 'pk0_phmean'
+    '2': 'pk2_phmean'
+    '000': 'bk000_phmean'
+    '202': 'bk202_phmean'
+
+cov_file: 'cov.npy'
+number_of_mocks: 1000
+rescale: 0.04
+
+path_to_save: '/global/homes/c/cguandal/TripoSH-Fitting/results/LRG/z0.8/'
+file_name: 'p0p2b0b2_old_emu'
+
+k_edges:
+    '0':
+        - 0.02
+        - 0.18
+    '2':
+        - 0.02
+        - 0.18
+    '000':
+        - 0.02
+        - 0.10
+    '202':
+        - 0.02
+        - 0.10
+
+mean_density: 1.0e-3
+redshift: 0.8
+cache_path: '/global/homes/c/cguandal/TripoSH-Fitting/emulator/LRG/z0.8/'
+
+prior:
+    'omega_cdm':
+        'type': 'Uni'
+        'lim':
+            - 0.102
+            - 0.139
+    'omega_b':
+        'type': 'Gauss'
+        'lim':
+            - 0.02218
+            - 0.00055
+    'h':
+        'type': 'Uni'
+        'lim':
+            - 0.575
+            - 0.747
+    'n_s':
+        'type': 'Fix'
+        'lim': 0.9649
+            
+    'ln10^{10}A_s':
+        'type': 'Uni'
+        'lim':
+            - 2.78
+            - 3.32
+    'b1':
+        'type': 'Uni'
+        'lim':
+            - 0
+            - 4
+    'b2':
+        'type': 'Uni'
+        'lim':
+            - -15
+            - 15
+    'bG2':
+        'type': 'Uni'
+        'lim':
+            - -15
+            - 15
+    'bGamma3':
+        'type': 'Uni'
+        'lim':
+            - -15
+            - 15
+    'c0':
+        'type': 'Uni'
+        'lim':
+            - -1000
+            - 1000
+    'c2pp':
+        'type': 'Uni'
+        'lim':
+            - -1000
+            - 1000
+    'ch':
+        'type': 'Uni'
+        'lim':
+            - -1000
+            - 1000
+    'c1':
+        'type': 'Uni'
+        'lim':
+            - -1000
+            - 1000
+    'c2':
+        'type': 'Uni'
+        'lim':
+            - -1000
+            - 1000
+    'Pshot':
+        'type': 'Uni'
+        'lim':
+            - -10
+            - 10
+    'a0':
+        'type': 'Uni'
+        'lim':
+            - -100
+            - 100
+    'Bshot':
+        'type': 'Uni'
+        'lim':
+            - -10
+            - 10
