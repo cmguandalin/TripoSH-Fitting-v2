@@ -2,7 +2,7 @@
 
 # Power Spectrum and Bispectrum Analysis
 
-This repository contains code for performing a likelihood analysis on power spectrum (`Pk`) and bispectrum (`Bk`) data using the emulator BIKER. The code is designed to work with yml configuration files, allowing for flexible and reproducible analysis.
+This repository contains code for performing a likelihood analysis on power spectrum (`Pk`) and bispectrum (`Bk`) data using the emulator BIKER. The code is designed to work with `yml` configuration files, allowing for flexible and reproducible analysis.
 
 ---
 
