@@ -25,8 +25,8 @@ This repository contains code for performing a likelihood analysis on power spec
 The code performs the following tasks:
 1. Loads data and covariance matrices from specified paths.
 2. Filters the data based on specified multipoles and wavenumber ranges.
-3. Computes model predictions using an emulator.
-4. Performs a likelihood analysis using Markov Chain Monte Carlo (MCMC) sampling via the `pocomc` library.
+3. Computes model predictions using the BIKER emulator.
+4. Performs a likelihood analysis using preconditioned Monte Carlo (PMC) sampling via the `pocomc` library.
 5. Supports multiprocessing for faster computation.
 
 ---
