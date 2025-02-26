@@ -151,7 +151,7 @@ There are jupyter notebooks available to analyse the chains
 
 ## License
 
-This project is licensed under the GNU General Public License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License. See the [LICENCE](LICENCE) file for details.
 
 ---
 
