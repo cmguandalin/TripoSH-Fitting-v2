@@ -40,6 +40,8 @@ The code performs the following tasks:
   - `yaml`
   - `argparse`
   - `pocomc` (version 1.1.0 or higher)
+  - `tensorflow` (version 2.15.0 or higher)
+  - `keras` (version 2.15.0 or higher)
   - `multiprocessing`
 
 You can install the required packages using `pip`:
