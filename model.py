@@ -118,7 +118,7 @@ class PkBkCalculator:
         Provides documentation and usage instructions for the class.
     """
     
-    def __init__(self, multipoles, mean_density, redshift, cache_path, fixed_params=['n_s'], rescale_kernels=True):
+    def __init__(self, multipoles, mean_density, redshift, cache_path, fixed_params=['n_s'], rescale_kernels=True, ordering=0):
         """
         Parameters:
         - multipoles (list)
@@ -137,6 +137,7 @@ class PkBkCalculator:
         self.zcen = redshift
         self.fixed_params = fixed_params
         self.rescale_kernels = rescale_kernels
+        self.ordering = ordering
 
         #############################################################
         # Check if the redshift is the one used to train the emulator
@@ -184,18 +185,7 @@ class PkBkCalculator:
         if self.zcen != float(emulator_redshift):
             raise ValueError(f'Redshift {self.zcen} does not match the one used by the emulator: {emulator_redshift}.')
     
-    #def _initialise_multipoles(self, multipoles):
-    #    # Initialise power spectrum and/or bispectrum multipoles to be computed
-    #    self.multipoles_pk = []
-    #    self.multipoles_bk = []
-    #    for i in multipoles:
-    #        if len(i)==1:
-    #            self.multipoles_pk.append(i)
-    #        elif len(i)==3:
-    #            self.multipoles_bk.append(i)
-    #        else:
-    #            print('Unrecognised multipole detected.')
-    
+
     def _initialise_emulators(self):
         # Initialise emulators for power spectrum and/or bispectrum
         if self.multipoles_pk:
@@ -230,22 +220,28 @@ class PkBkCalculator:
         # Used in the pk_from_emulator function.
         default_ns = 0.9649
 
-        if 'n_s' not in self.fixed_params:
+        if self.fixed_params is None: 
             # n_s was included in the training of the emulator
             if 'n_s' not in pars:
                 # but is not varied in the MCMC analysis
-                
-                #return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s'], default_ns]
-                return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s'], default_ns]
+
+                if self.ordering==0:
+                    return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s'], default_ns]
+                else:
+                    return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s'], default_ns]
             else:
                 # and it is varied in the MCMC analysis
-                
-                #return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s'], pars['n_s']]
-                return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s'], pars['n_s']]
-        else:
+                if self.ordering==0:
+                    return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s'], pars['n_s']]
+                else:
+                    return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s'], pars['n_s']]
+        elif 'n_s' in self.fixed_params:
             # n_s was not included in the training of the emulator, therefore it cannot be varied
             if 'n_s' not in pars:
-                return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s']]
+                if self.ordering==0:
+                    return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s']]
+                else:
+                    return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s']]
             else:
                 raise ValueError(f"n_s was not included in the training of the emulator, therefore it cannot be varied. Fix this parameter to its fiducial value in the sampling procedure.")
                 
