@@ -90,7 +90,7 @@ prior:
   param2:
     type: 'Gaussian'
     lim: [mean, std]
-mean_density: 1.0e-3 #n This has to be a float, otherwise it is interpreted as a string.
+mean_density: 1.0e-3 # This has to be a float, otherwise it is interpreted as a string.
 redshift: 0.5
 cache_path: '/path/to/cache/files/z0.5/'
 ```
