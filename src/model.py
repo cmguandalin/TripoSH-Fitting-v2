@@ -118,7 +118,7 @@ class PkBkCalculator:
         Provides documentation and usage instructions for the class.
     """
     
-    def __init__(self, multipoles, mean_density, redshift, cache_path, fixed_params=['n_s'], rescale_kernels=True, ordering=0):
+    def __init__(self, multipoles, mean_density, redshift, cache_path, fixed_params=['n_s'], rescale_kernels=True, ordering=1):
         """
         Parameters:
         - multipoles (list)
@@ -224,22 +224,22 @@ class PkBkCalculator:
             # n_s was included in the training of the emulator
             if 'n_s' not in pars:
                 # but is not varied in the MCMC analysis
-
-                if self.ordering==0:
+                
+                if self.ordering == 0:
                     return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s'], default_ns]
                 else:
                     return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s'], default_ns]
             else:
                 # and it is varied in the MCMC analysis
-                if self.ordering==0:
+                if self.ordering == 0:
                     return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s'], pars['n_s']]
                 else:
                     return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s'], pars['n_s']]
         elif 'n_s' in self.fixed_params:
             # n_s was not included in the training of the emulator, therefore it cannot be varied
             if 'n_s' not in pars:
-                if self.ordering==0:
-                    return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s']]
+                if self.ordering == 0:
+                    return [pars['omega_cdm'],pars['h'],pars['omega_b'], pars['ln10^{10}A_s']]
                 else:
                     return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s']]
             else:
@@ -440,6 +440,23 @@ class ModellingFunction:
         self.data = data
         self.calculator = calculator
         self.multipoles = multipoles
+        self.fixed_params = self._extract_fixed_params()
+
+    def _extract_fixed_params(self):
+        """
+        Extract fixed parameters from the priors dictionary.
+
+        Args:
+            priors (dict): Dictionary of priors.
+
+        Returns:
+            fixed_params (dict): Dictionary of fixed parameters and their values.
+        """
+        fixed_params = {}
+        for param, prior_info in self.priors.items():
+            if prior_info['type'] == 'Fix' and param != 'n_s':
+                fixed_params[param] = prior_info['lim']
+        return fixed_params
 
     def compute_model_vector(self, theta):
         """
@@ -452,29 +469,32 @@ class ModellingFunction:
             np.ndarray: Concatenated model predictions for the specified multipoles.
         """
         # Convert the input array of MCMC points to a dictionary for the emulator
-        parameters_to_vary = self.priors.copy()
-        for name, value in zip(parameters_to_vary.keys(), theta):
-            parameters_to_vary[name] = value
+        parameters_to_vary = {}
+        free_param_names   = [param for param in self.priors if self.priors[param]['type'] != 'Fix']
+        for i, param in enumerate(free_param_names):
+            parameters_to_vary[param] = theta[i]
+
+        full_params = {**parameters_to_vary, **self.fixed_params}
 
         # Initialize an empty list to store the model predictions
         model_vector = []
 
         # Separate multipoles into power spectrum (Pk) and bispectrum (Bk)
-        multipoles_pk = {i for i in self.multipoles if len(i) == 1}
-        multipoles_bk = {i for i in self.multipoles if len(i) == 3}
+        multipoles_pk = [i for i in self.multipoles if len(i) == 1] or None
+        multipoles_bk = [i for i in self.multipoles if len(i) == 3] or None
 
         # Compute power spectrum predictions
         if multipoles_pk:
             for L in multipoles_pk:
                 k_from_data = self.data[L]['k']
-                model_pk = self.calculator.pk_from_emulator(parameters_to_vary, L)(k_from_data)
+                model_pk = self.calculator.pk_from_emulator(full_params, L)(k_from_data)
                 model_vector.append(model_pk)
 
         # Compute bispectrum predictions
         if multipoles_bk:
             for l1l2L in multipoles_bk:
                 k_from_data = self.data[l1l2L]['k']
-                model_bk = self.calculator.bk_from_emulator(parameters_to_vary, l1l2L)(k_from_data)
+                model_bk = self.calculator.bk_from_emulator(full_params, l1l2L)(k_from_data)
                 model_vector.append(model_bk)
 
         # Concatenate the model predictions into a single array
