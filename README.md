@@ -38,7 +38,6 @@ The code performs the following tasks:
   - `numpy`
   - `scipy`
   - `yaml`
-  - `argparse`
   - `nautilus` (version 1.0.5)
   - `tensorflow` (version 2.15.0 or higher)
   - `keras` (version 2.15.0 or higher)
