@@ -73,18 +73,25 @@ The code uses a YAML configuration file to specify input parameters. Below is an
 data_path: '/path/to/data/'
 cov_path: '/path/to/covariance/'   # Optional
 cov_file: 'covariance_file.npy'    # Required if cov_path is not provided
+number_of_mocks: 1000              # Number of mocks used to build covariance
+rescale: false                     # Rescaling factor for the covariance
+
 data_files:
-  0: 'pk_ell0'
-  2: 'pk_ell2'
-  000: 'bk_ell000'
-  202: 'bk_ell202'
-rescale: false
-number_of_mocks: 1000
+  0: 'pk0'
+  2: 'pk2'
+  000: 'bk000'
+  202: 'bk202'
+
 k_edges:
   0: [kmin, kmax]
   2: [kmin, kmax]
   000: [kmin, kmax]
   202: [kmin, kmax]
+
+mean_density: 1.e-3 # This has to be a float, otherwise it is interpreted as a string.
+redshift: 0.8
+cache_path: '/path/to/cache/files/z0.8/' # Must have a name "z0.8" because the model checks if the redshift of the emulator matches the one assigned to the sample
+
 prior:
   param1:
     type: 'Uniform'
@@ -92,9 +99,9 @@ prior:
   param2:
     type: 'Gaussian'
     lim: [mean, std]
-mean_density: 1.0e-3 # This has to be a float, otherwise it is interpreted as a string.
-redshift: 0.5
-cache_path: '/path/to/cache/files/z0.5/'
+  param3:
+    type: 'Fix'
+    lim: [value]
 ```
 
 ### Key Configuration Parameters
