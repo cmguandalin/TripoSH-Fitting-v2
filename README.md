@@ -71,10 +71,10 @@ The code uses a YAML configuration file to specify input parameters. Below is an
 
 ```yaml
 data_path: '/path/to/data/'
-cov_path: '/path/to/covariance/'   # Optional
-cov_file: 'covariance_file.npy'    # Required if cov_path is not provided
-number_of_mocks: 1000              # Number of mocks used to build covariance
-rescale: false                     # Rescaling factor for the covariance
+cov_path: '/path/to/covariance/covariance_file.npy'   # Optional
+cov_file: 'covariance_file.npy'                       # Required if cov_path is not provided
+number_of_mocks: 1000                                 # Number of mocks used to build covariance
+rescale: false                                        # Rescaling factor for the covariance
 
 data_files:
   0: 'pk0'
