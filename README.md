@@ -127,11 +127,11 @@ prior:
 To run the code, use the following command:
 
 ```bash
-nohup python -u src/inference.py -config config/config.yml > nohup.out 2>&1 &
+nohup python -u src/inference.py -config config/example.yml > nohup.out 2>&1 &
 ```
 or 
 ```bash
-sbatch scripts/run_fit.sh
+sbatch scripts/run_fit-nautilus.sh
 ```
 
 Log files can be tracked via 
