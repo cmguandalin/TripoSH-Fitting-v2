@@ -26,7 +26,7 @@ The code performs the following tasks:
 1. Loads data and covariance matrices from specified paths.
 2. Filters the data based on specified multipoles and wavenumber ranges.
 3. Computes model predictions using the BIKER emulator.
-4. Performs a likelihood analysis using preconditioned Monte Carlo (PMC) sampling via the `pocomc` library.
+4. Performs a likelihood analysis using the nested Monte Carlo sampling method implemented in the `nautilus` library.
 5. Supports multiprocessing for faster computation.
 
 ---
@@ -39,7 +39,7 @@ The code performs the following tasks:
   - `scipy`
   - `yaml`
   - `argparse`
-  - `pocomc` (version 1.1.0 or higher)
+  - `nautilus` (version 1.0.5)
   - `tensorflow` (version 2.15.0 or higher)
   - `keras` (version 2.15.0 or higher)
   - `multiprocessing`
@@ -47,7 +47,7 @@ The code performs the following tasks:
 You can install the required packages using `pip`:
 
 ```bash
-pip install numpy scipy pyyaml argparse pocomc
+pip install numpy scipy pyyaml argparse nautilus-sampler
 ```
 
 ---
@@ -120,26 +120,42 @@ cache_path: '/path/to/cache/files/z0.5/'
 To run the code, use the following command:
 
 ```bash
-python src/inference.py -config /path/to/config.yml
+nohup python -u src/inference.py -config config/config.yml > nohup.out 2>&1 &
+```
+or 
+```bash
+sbatch scripts/run_fit.sh
+```
+
+Log files can be tracked via 
+```bash
+tail -f nohup.out
+```
+or
+```bash
+tail -f logs/jobID_jobName.out
 ```
 
 ### Command-Line Arguments
 
 - `-config`: Path to the configuration file (required).
+- `-ncpus`: Number of cpus for multiprocessing runs (optional).
+- `-nlive`: Number of live points for sampling (optional).
+- `-flive`: Estimate of the fraction of the evidence in the live set (optional).
 
 ---
 
 ## Output
 
 The code outputs the following:
-1. **Sampling Results**: The pocoMC sampler produces samples from the posterior distribution of the parameters.
-2. **Log File**: Progress and timing information are printed to the console.
+1. **Sampling Results**: A `.npy` dictionary containing the samples, log_weights, and log_likelihood produced by the `nautilus` sampler, and the priors containing the parameters varied in the analysis.
+3. **Log File**: Progress and timing information are constantly printed.
 
 ---
 
 ## Multiprocessing
 
-The code supports multiprocessing to speed up the likelihood evaluation. By default, it uses all available CPU cores. You can control the number of CPUs using the `SLURM_CPUS_PER_TASK` environment variable (for SLURM jobs) or by modifying the `ncpus` variable in the code.
+The code supports multiprocessing to speed up the likelihood evaluation. By default, it uses all available CPU cores. You can control the number of CPUs by modifying the `ncpus` variable in the code. To run in a single CPU, set `ncpus = 1`. 
 
 ---
 
@@ -157,5 +173,5 @@ This project is licensed under the GNU General Public License. See the [LICENCE]
 
 ## Acknowledgments
 
-- The `pocomc` library for MCMC sampling.
+- The `nautilus` library for MCMC sampling.
 - The emulator used for computing power spectrum and bispectrum predictions.
