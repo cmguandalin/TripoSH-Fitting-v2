@@ -1,25 +1,25 @@
-data_path: '/global/homes/c/cguandal/TripoSH-Fitting/data/LRG/z0.8/'
+data_path: '/cosma/home/dp322/dc-guan2/fitting/pipeline/data/QSO/'
 
 data_files:
-    '0': 'pk0_phmean'
-    '2': 'pk2_phmean'
-    '000': 'bk000_phmean'
-    '202': 'bk202_phmean'
+    '0': 'pk0_CubicBox_rsd_phmean'
+    '2': 'pk2_CubicBox_rsd_phmean'
+    '000': 'bk000_diag_CubicBox_rsd_phmean'
+    '202': 'bk202_diag_CubicBox_rsd_phmean'
 
-cov_file: 'cov.npy'
+cov_file: 'new_cov_QSO_0-2-4_000-202.npy'
 number_of_mocks: 1000
-rescale: 0.04
+rescale: false
 
-path_to_save: '/global/homes/c/cguandal/TripoSH-Fitting/results/LRG/z0.8/'
-file_name: 'p0p2b0b2_old_emu'
+path_to_save: '/cosma8/data/dp322/dc-guan2/results/QSO/'
+file_name: 'p0p2b0b2_naut_noresc_fixedparams'
 
 k_edges:
     '0':
         - 0.02
-        - 0.18
+        - 0.20
     '2':
         - 0.02
-        - 0.18
+        - 0.20
     '000':
         - 0.02
         - 0.10
@@ -27,9 +27,9 @@ k_edges:
         - 0.02
         - 0.10
 
-mean_density: 1.0e-3
-redshift: 0.8
-cache_path: '/global/homes/c/cguandal/TripoSH-Fitting/emulator/LRG/z0.8/'
+mean_density: 2.e-4
+redshift: 1.4
+cache_path: '/cosma/apps/dp322/dc-guan2/emulator/QSO/cosmo2/cache/z1.4/'
 
 prior:
     'omega_cdm':
@@ -54,8 +54,8 @@ prior:
     'ln10^{10}A_s':
         'type': 'Uni'
         'lim':
-            - 2.78
-            - 3.32
+            - 2.3
+            - 3.8
     'b1':
         'type': 'Uni'
         'lim':
@@ -72,20 +72,14 @@ prior:
             - -15
             - 15
     'bGamma3':
-        'type': 'Uni'
-        'lim':
-            - -15
-            - 15
+        'type': 'Fix'
+        'lim': -2.40738
     'c0':
-        'type': 'Uni'
-        'lim':
-            - -1000
-            - 1000
+        'type': 'Fix'
+        'lim': 20.35965
     'c2pp':
-        'type': 'Uni'
-        'lim':
-            - -1000
-            - 1000
+        'type': 'Fix'
+        'lim': 69.88978
     'ch':
         'type': 'Uni'
         'lim':
@@ -102,15 +96,11 @@ prior:
             - -1000
             - 1000
     'Pshot':
-        'type': 'Uni'
-        'lim':
-            - -10
-            - 10
+        'type': 'Fix'
+        'lim': -0.96323
     'a0':
-        'type': 'Uni'
-        'lim':
-            - -100
-            - 100
+        'type': 'Fix'
+        'lim': 0.59054
     'Bshot':
         'type': 'Uni'
         'lim':
