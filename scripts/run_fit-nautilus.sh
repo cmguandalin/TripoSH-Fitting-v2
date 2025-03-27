@@ -21,4 +21,4 @@ eval "$(/cosma/local/anaconda3/202309/bin/conda shell.bash hook)"
 conda activate fit2
 
 export GLOBAL_DIR="/cosma/home/dp322/dc-guan2/fitting/pipeline"
-python -u $GLOBAL_DIR/src/inference.py -config $GLOBAL_DIR/config/$CONFIG_FILE
+python -u $GLOBAL_DIR/src/inference.py -config $GLOBAL_DIR/config/$CONFIG_FILE.yml -nlive 5000
