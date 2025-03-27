@@ -167,7 +167,9 @@ The code supports multiprocessing to speed up the likelihood evaluation. By defa
 
 ## Jupyter Notebooks
 
-There are jupyter notebooks available to analyse the chains
+The `generate_covariance.ipynb` notebook generates the covariance file in the required format.
+There will be jupyter notebooks available to analyse the chains soon.
+
 
 ---
 
