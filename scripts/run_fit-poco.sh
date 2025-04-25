@@ -7,6 +7,11 @@
 #SBATCH --output=/path/to/fitting/pipeline/logs/%j_%x.out
 #SBATCH --error=/path/to/fitting/pipeline/logs/%j_%x.err
 
+# Critical: Set threading variables
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export OPENBLAS_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
 # Check if a config file was provided
 if [ -z "$1" ]; then
   echo "Error: No config file provided."
@@ -22,3 +27,5 @@ conda activate fit2
 
 export GLOBAL_DIR="/cosma/home/dp322/dc-guan2/fitting/pipeline"
 python -u $GLOBAL_DIR/src/inference.py -config $GLOBAL_DIR/$CONFIG_FILE
+# Use the following if there's no intention to run it in your pc
+# python -u $GLOBAL_DIR/src/inference.py -config $GLOBAL_DIR/$CONFIG_FILE -ncpus $SLURM_CPUS_PER_TASK
