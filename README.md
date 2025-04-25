@@ -181,5 +181,5 @@ This project is licensed under the GNU General Public License. See the [LICENCE]
 
 ## Acknowledgments
 
-- The `nautilus` library for MCMC sampling.
+- The `nautilus` library for sampling.
 - The emulator used for computing power spectrum and bispectrum predictions.
