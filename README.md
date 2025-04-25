@@ -26,7 +26,7 @@ The code performs the following tasks:
 1. Loads data and covariance matrices from specified paths.
 2. Filters the data based on specified multipoles and wavenumber ranges.
 3. Computes model predictions using the BIKER emulator.
-4. Performs a likelihood analysis using the nested Monte Carlo sampling method implemented in the `nautilus` library.
+4. Performs a likelihood analysis using the nested Monte Carlo sampling method implemented in the `pocoMC` library.
 5. Supports multiprocessing for faster computation.
 
 ---
@@ -38,7 +38,7 @@ The code performs the following tasks:
   - `numpy`
   - `scipy`
   - `yaml`
-  - `nautilus` (version 1.0.5)
+  - `pocoMC` (version 1.2.6)
   - `tensorflow` (version 2.15.0 or higher)
   - `keras` (version 2.15.0 or higher)
   - `multiprocessing`
@@ -46,7 +46,7 @@ The code performs the following tasks:
 You can install the required packages using `pip`:
 
 ```bash
-pip install numpy scipy pyyaml argparse nautilus-sampler
+pip install numpy scipy pyyaml argparse pocomc
 ```
 
 ---
@@ -146,15 +146,12 @@ tail -f logs/jobID_jobName.out
 
 - `-config`: Path to the configuration file (required).
 - `-ncpus`: Number of cpus for multiprocessing runs (optional).
-- `-nlive`: Number of live points for sampling (optional).
-- `-flive`: Estimate of the fraction of the evidence in the live set (optional).
-
 ---
 
 ## Output
 
 The code outputs the following:
-1. **Sampling Results**: A `.npy` dictionary containing the samples, log_weights, and log_likelihood produced by the `nautilus` sampler, and the priors containing the parameters varied in the analysis.
+1. **Sampling Results**: A `.npy` dictionary containing the samples, weights, log_likelihood and log_priors produced by the `pocoMC` sampler, and the priors containing the parameters varied in the analysis.
 3. **Log File**: Progress and timing information are constantly printed.
 
 ---
@@ -181,5 +178,5 @@ This project is licensed under the GNU General Public License. See the [LICENCE]
 
 ## Acknowledgments
 
-- The `nautilus` library for MCMC sampling.
+- The `pocoMC` library for sampling.
 - The emulator used for computing power spectrum and bispectrum predictions.
