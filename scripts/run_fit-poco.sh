@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=128
-#SBATCH --time=24:00:00           # Max wall time
+#SBATCH --time=04:00:00           # Max wall time
 #SBATCH --output=/path/to/fitting/pipeline/logs/%j_%x.out
 #SBATCH --error=/path/to/fitting/pipeline/logs/%j_%x.err
 
@@ -21,4 +21,4 @@ eval "$(/cosma/local/anaconda3/202309/bin/conda shell.bash hook)"
 conda activate fit2
 
 export GLOBAL_DIR="/cosma/home/dp322/dc-guan2/fitting/pipeline"
-python -u $GLOBAL_DIR/src/inference.py -config $GLOBAL_DIR/$CONFIG_FILE -nlive 5000
+python -u $GLOBAL_DIR/src/inference.py -config $GLOBAL_DIR/$CONFIG_FILE
