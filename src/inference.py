@@ -1,39 +1,27 @@
-
 import argparse
-import os, sys
+import os,sys
 import yaml
 import numpy as np
-
+from time import time
+import pocomc as pc
 import data_loader as dload
 import covariance_loader as cload
 import likelihood as clike
 import model
-
-import h5py
 from datetime import datetime
-from time import time
+from multiprocessing import Pool
 
-from nautilus import Prior
-from nautilus import Sampler
-
-'''
-    ~*~*~*~ history ~*~*~*~
-
-v2) a) added fixed parameters to likelihood;
-    b) saving parameters_to_be_varied instead of the priors to the .npy result.
-
-'''
-
-''' STARTING '''
-
-# NEED THIS OTHERWISE SAMPLING DOES NOT RUN!
 os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
-
 sys.stderr = sys.stdout
 
-# Define the log-probability function for the sampler
-def likelihood_wrapper(theta, data_, icov_, instance):
-    return instance.ln_prob(theta, data_, icov_)
+# Global variables (avoid passing them as arguments) - this should make the sampler faster in slurm
+global global_full_data, global_inv_cov, global_likelihood
+global_full_data = None
+global_inv_cov = None
+global_likelihood = None
+
+def likelihood_wrapper(theta):
+    return global_likelihood.ln_prob(theta, global_full_data, global_inv_cov)
 
 if __name__ == '__main__':
 
@@ -42,12 +30,9 @@ if __name__ == '__main__':
     ##############################
     # LOADING CONFIGURATION FILE #
     ##############################
-
     parser = argparse.ArgumentParser(description='Configuration file to load')
     parser.add_argument('-config', '-c', '-C', type=str, help='config file', required=True,dest='config')
-    parser.add_argument('-ncpus', type=int, help='Number of CPUs in a PC to use.', required=False)
-    parser.add_argument('-nlive', type=int, help='Number of live points for sampling.', required=False)
-    parser.add_argument('-flive', type=int, help='Estimate of the fraction of the evidence in the live set.', required=False)
+    parser.add_argument('-ncpus', type=int, help='Number of CPUs in a PC to use.', required=False, default=1)
     cmdline = parser.parse_args()
 
     print(f'Using {cmdline.config}')
@@ -89,10 +74,9 @@ if __name__ == '__main__':
     #######################
 
     # Iterate over a copy of the dictionary to avoid modifying it while iterating
-    parameters_to_be_varied = priors.copy()
     for param, prior_info in list(priors.items()):
         if prior_info['type'] == 'Fix':
-            del parameters_to_be_varied[param]
+            del priors[param]
 
     #############
     # LOAD DATA #
@@ -120,84 +104,74 @@ if __name__ == '__main__':
     calculator = model.PkBkCalculator(multipoles, mean_density, redshift, cache_path, fixed_params=['n_s'], rescale_kernels=True, ordering=1)
     model_function = model.ModellingFunction(priors, data, calculator, multipoles)
 
-    ########################
-    # LIKELIHOOD AND PRIOR #
-    ########################
+    ##############
+    # LIKELIHOOD #
+    ##############
     likelihood = clike.Likelihood(priors, model_function.compute_model_vector)
-
-    def likelihood_nautilus(theta):
-        return likelihood_wrapper(theta, full_data, inv_cov, likelihood)
-
     prior = likelihood.initialise_prior()
+
+    # Assign to global variables
+    global_full_data = full_data
+    global_inv_cov = inv_cov
+    global_likelihood = likelihood
 
     ##################
     # START SAMPLING #
     ##################
 
-    checkpoint_file = os.path.join(path_to_save, file_name + '_checkpoint.h5')
+    # number of effective particles
+    neff = 4000
+    # number of effectively independent samples
+    ntot = 20000
 
-    if os.path.exists(checkpoint_file):
-        print(f"Warning: Checkpoint {checkpoint_file} already exists. Resuming from existing chain.")
-        resume_checkpoint = True
-    else:
-        resume_checkpoint = False
-        print(f"Creating a new checkpoint file: {checkpoint_file}")
-
-    if cmdline.ncpus:
+    if cmdline.ncpus is not None:
         ncpus = int(cmdline.ncpus)
     else:
         ncpus = 1
 
-    if cmdline.nlive:
-        nlive = int(cmdline.nlive)
-    else:
-        nlive = 1000
-
-    if cmdline.flive:
-        flive = int(cmdline.flive)
-    else:
-        flive = 0.1
-
-    print(f'Starting sampling at {datetime.now()} with {ncpus} CPUs, {nlive} live points and f_live={flive}. \n')
+    print(f'Starting sampling at {datetime.now()} with {ncpus} CPUs. \n')
 
     if ncpus > 1:
-        sampler = Sampler(
-            prior=prior,
-            likelihood=likelihood_nautilus,
-            pass_dict=False,
-            n_live=nlive,
-            pool=ncpus,
-            filepath=checkpoint_file
-        )
+        with Pool(ncpus) as pool:
+            sampler = pc.Sampler(
+                prior=prior,
+                likelihood=likelihood_wrapper,
+                n_effective=neff,
+                pool=pool,
+                output_dir=path_to_save,
+                output_label=file_name
+            )
+            sampler.run(n_total=ntot, progress=True, save_every=200)
 
-        sampler.run(f_live=flive,verbose=True,discard_exploration=True)
-        samples, log_weights, log_like = sampler.posterior()
     else:
-        sampler = Sampler(
+        sampler = pc.Sampler(
             prior=prior,
-            likelihood=likelihood_nautilus,
-            pass_dict=False,
-            n_live=nlive,
-            filepath=checkpoint_file
+            likelihood=likelihood_wrapper,
+            n_effective=neff,
+            output_dir=path_to_save,
+            output_label=file_name
         )
+        sampler.run(n_total=ntot, progress=True, save_every=200)
 
-        sampler.run(f_live=flive,verbose=True,discard_exploration=True)
-        samples, log_weights, log_like = sampler.posterior()
+    samples, weights, logl, logp = sampler.posterior()
 
     print(f"Sampling ended at: {datetime.now()}")
 
-    # Save the final results in .npy format
-    results = {
-        'samples': samples,
-        'log_w': log_weights,
-        'log_l': log_like,
-        'priors': parameters_to_be_varied
-    }
+    # Save results
+    os.makedirs(path_to_save, exist_ok=True)
 
-    np.save(os.path.join(path_to_save, file_name + '_results.npy'), results)
+    print(f"Results saved to {os.path.join(path_to_save, file_name + '.npy')}")
 
-    print(f"Results saved to {os.path.join(path_to_save, file_name + '_results.npy')}")
+    results = {}
+    results['priors'] = priors
+    results['samples'] = samples
+    results['weights'] = weights
+    results['logl'] = logl
+    results['logp'] = logp
+
+    np.save(os.path.join(path_to_save, file_name + '.npy'), results)
 
     time_f = time()
 
+    print('Sampling efficiency:', sampler.results["efficiency"])
     print('Time to estimate (in minutes):', np.round((time_f-time_i)/60,2))

@@ -1,5 +1,5 @@
-from nautilus import Prior
 from scipy.stats import norm, uniform
+import pocomc as pc
 import numpy as np
 
 class Likelihood:
@@ -19,44 +19,34 @@ class Likelihood:
         Initialise the prior distributions based on the priors dictionary.
 
         Returns:
-            Prior: A Prior object from the nautilus library.
+            pc.Prior: A Prior object from the pocomc library.
         """
-        prior = Prior()  # Initialise nautilus Prior object
-
+        prior_list = []
         for param, prior_info in self.priors_dict.items():
-
-            if prior_info['type'] == 'Fix':
-                # Skip fixed parameters
-                continue
-
             if prior_info['type'] in ['Uni', 'Uniform']:
-	        # Uniform distribution
+                # Uniform distribution
                 lower, upper = prior_info['lim']
-                prior.add_parameter(param, dist=(lower, upper))
+                prior_list.append(uniform(lower, upper - lower))
             elif prior_info['type'] in ['Gauss', 'Gaussian']:
                 # Gaussian distribution
                 mean, std = prior_info['lim'][0], prior_info['lim'][1]
-                prior.add_parameter(param, dist=norm(loc=mean, scale=std))
+                prior_list.append(norm(mean, std))
             else:
                 raise ValueError(f"Unknown prior type: {prior_info['type']}")
+        return pc.Prior(prior_list)
 
-        return prior
-
-    #def ln_prob(self, param_dict, data_, icov_):
     def ln_prob(self, theta, data_, icov_):
         """
         Compute the log-probability for the given parameters.
 
         Args:
-            param_dict (dict): Dictionary of parameter names and values.
+            theta (np.ndarray): Array of parameter values.
             data_ (np.ndarray): Observed data vector.
             icov_ (np.ndarray): Inverse covariance matrix.
 
         Returns:
             float: Log-probability.
         """
-        # Convert the parameter dictionary to a numpy array
-        #theta = np.array([param_dict[param] for param in sorted(param_dict.keys())])
         m = self.model_function(theta)
         diff = m - data_
         chi2_try = np.dot(diff.T, np.dot(icov_, diff))
