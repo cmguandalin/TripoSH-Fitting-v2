@@ -7,7 +7,7 @@
 #SBATCH --output=/path/to/fitting/pipeline/logs/%j_%x.out
 #SBATCH --error=/path/to/fitting/pipeline/logs/%j_%x.err
 
-# Critical: Set threading variables
+# Critical: set threading variables (should help to use as much as possible of the CPUs available) 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export MKL_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export OPENBLAS_NUM_THREADS=$SLURM_CPUS_PER_TASK
