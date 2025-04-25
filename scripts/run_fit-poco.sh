@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=nautilus
+#SBATCH --job-name=poco
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=128
