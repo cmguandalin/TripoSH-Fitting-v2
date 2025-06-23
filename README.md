@@ -130,7 +130,7 @@ nohup python -u src/inference.py -config config/example.yml > nohup.out 2>&1 &
 ```
 or 
 ```bash
-sbatch scripts/run_fit-nautilus.sh config/example.yml
+sbatch scripts/run_fit-poco.sh config/example.yml
 ```
 
 Log files can be tracked via 
