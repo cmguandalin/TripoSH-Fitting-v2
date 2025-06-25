@@ -42,6 +42,7 @@ The code performs the following tasks:
   - `tensorflow` (version 2.15.0 or higher)
   - `keras` (version 2.15.0 or higher)
   - `multiprocessing`
+  - CLASS-PT
 
 You can install the required packages using `pip`:
 
