@@ -206,17 +206,15 @@ class PkBkCalculator:
         if not hasattr(self, 'classPT'):
             self.classPT = Class()
             self.classPT.set(self.params_cosmo)
-            self.classPT.set({
-                'non linear': 'PT',
-                'IR resummation': 'Yes',
-                'Bias tracers': 'Yes',
-                'cb': 'Yes',
-                'RSD': 'Yes',
-                'AP': 'No',
-                'output': 'mpk'
-            })
+            self.classPT.set({'output':'mPk',
+                        'non linear':'PT',
+                        'IR resummation':'Yes',
+                        'Bias tracers':'Yes',
+                        'cb':'Yes',
+                        'RSD':'Yes',
+                        'AP':'No'})
             self.classPT.compute()
-            self.classPT.initialize_output(self.k_pk * self.classPT.h(), self.zcen)
+            self.classPT.initialize_output(self.k_pk * self.classPT.h(), self.zcen, len(self.k_pk))
             
     def _check_redshift(self):
         # Check if provided redshift is the same as the one used to train the emulator. 
@@ -593,7 +591,25 @@ class ModellingFunction:
         self.data = data
         self.calculator = calculator
         self.multipoles = multipoles
+        self.fixed_cosmology_mode = calculator.fixed_cosmology_mode
+        self.fixed_params = self._extract_fixed_params()
 
+    def _extract_fixed_params(self):
+        """
+        Extract fixed parameters from the priors dictionary.
+
+        Args:
+            priors (dict): Dictionary of priors.
+
+        Returns:
+            fixed_params (dict): Dictionary of fixed parameters and their values.
+        """
+        fixed_params = {}
+        for param, prior_info in self.priors.items():
+            if prior_info['type'] == 'Fix' and param != 'n_s':
+                fixed_params[param] = prior_info['lim']
+        return fixed_params
+        
     def compute_model_vector(self, theta):
         """
         Compute the model predictions for the power spectrum and bispectrum based on the input parameters.
@@ -605,11 +621,20 @@ class ModellingFunction:
         Returns:
             np.ndarray: Concatenated model predictions for the specified multipoles.
         """
-        # Convert the input array of MCMC points to a dictionary for the emulator
-        parameters_to_vary = self.priors.copy()
-        for name, value in zip(parameters_to_vary.keys(), theta):
-            parameters_to_vary[name] = value
+        ##  # Convert the input array of MCMC points to a dictionary for the emulator
+        ##  parameters_to_vary = self.priors.copy()
+        ##  print(parameters_to_vary)
+        ##  for name, value in zip(parameters_to_vary.keys(), theta):
+        ##      parameters_to_vary[name] = value
 
+        # Convert the input array of MCMC points to a dictionary for the emulator
+        parameters_to_vary = {}
+        free_param_names   = [param for param in self.priors if self.priors[param]['type'] != 'Fix']
+        for i, param in enumerate(free_param_names):
+            parameters_to_vary[param] = theta[i]
+
+        full_params = {**parameters_to_vary, **self.fixed_params}
+        
         # Initialize an empty list to store the model predictions
         model_vector = []
 
@@ -622,24 +647,24 @@ class ModellingFunction:
             if multipoles_pk:
                 for L in multipoles_pk:
                     k_from_data = self.data[L]['k']
-                    model_pk = self.calculator.pk_with_fixed_cosmology(parameters_to_vary, L)(k_from_data)
+                    model_pk = self.calculator.pk_with_fixed_cosmology(full_params, L)(k_from_data)
                     model_vector.append(model_pk)
             if multipoles_bk:
                 for l1l2L in multipoles_bk:
                     k_from_data = self.data[l1l2L]['k']
-                    model_bk = self.calculator.bk_with_fixed_cosmology(parameters_to_vary, l1l2L)(k_from_data)
+                    model_bk = self.calculator.bk_with_fixed_cosmology(full_params, l1l2L)(k_from_data)
                     model_vector.append(model_bk)
         else:
             # Compute predictions from the emulator
             if multipoles_pk:
                 for L in multipoles_pk:
                     k_from_data = self.data[L]['k']
-                    model_pk = self.calculator.pk_from_emulator(parameters_to_vary, L)(k_from_data)
+                    model_pk = self.calculator.pk_from_emulator(full_params, L)(k_from_data)
                     model_vector.append(model_pk)
             if multipoles_bk:
                 for l1l2L in multipoles_bk:
                     k_from_data = self.data[l1l2L]['k']
-                    model_bk = self.calculator.bk_from_emulator(parameters_to_vary, l1l2L)(k_from_data)
+                    model_bk = self.calculator.bk_from_emulator(full_params, l1l2L)(k_from_data)
                     model_vector.append(model_bk)
 
         # Concatenate the model predictions into a single array

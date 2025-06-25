@@ -74,9 +74,10 @@ if __name__ == '__main__':
     #######################
 
     # Iterate over a copy of the dictionary to avoid modifying it while iterating
+    parameters_to_be_varied = priors.copy()
     for param, prior_info in list(priors.items()):
         if prior_info['type'] == 'Fix':
-            del priors[param]
+            del parameters_to_be_varied[param]
 
     #############
     # LOAD DATA #
@@ -163,7 +164,7 @@ if __name__ == '__main__':
     print(f"Results saved to {os.path.join(path_to_save, file_name + '.npy')}")
 
     results = {}
-    results['priors'] = priors
+    results['priors'] = parameters_to_be_varied
     results['samples'] = samples
     results['weights'] = weights
     results['logl'] = logl

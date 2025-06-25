@@ -23,6 +23,9 @@ class Likelihood:
         """
         prior_list = []
         for param, prior_info in self.priors_dict.items():
+            if prior_info['type'] == 'Fix':
+                # Skip fixed parameters
+                continue
             if prior_info['type'] in ['Uni', 'Uniform']:
                 # Uniform distribution
                 lower, upper = prior_info['lim']
