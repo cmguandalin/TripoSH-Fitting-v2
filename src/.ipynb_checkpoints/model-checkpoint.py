@@ -309,7 +309,7 @@ class PkBkCalculator:
         fnlortho = pars.get('fnlortho',0.0)
         fnlortho_LSS = pars.get('fnlortho_LSS',0.0)
 
-        self.Pstoch = (1 + Pshot + a0 * self.precomputed_kernels['k']**2.0) / self.mean_density
+        self.Pstoch = (1 + Pshot + a0 * self.k_pk**2.0) / self.mean_density
         
         if ell == '0':
             cs0 = pars.get('c0', 0.0)
