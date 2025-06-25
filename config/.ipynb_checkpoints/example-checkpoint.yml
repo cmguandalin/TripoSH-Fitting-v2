@@ -1,4 +1,4 @@
-data_path: '/cosma/home/dp322/dc-guan2/fitting/pipeline/data/QSO/'
+data_path: '/Users/austerlitz/Desktop/TripoSH-Fitting-v2/data/QSO/'
 
 data_files:
     '0': 'pk0_CubicBox_rsd_phmean'
@@ -10,7 +10,7 @@ cov_file: 'new_cov_QSO_0-2-4_000-202.npy'
 number_of_mocks: 1000
 rescale: false
 
-path_to_save: '/cosma8/data/dp322/dc-guan2/results/QSO/'
+path_to_save: '/Users/austerlitz/Desktop/TripoSH-Fitting-v2/results/QSO/'
 file_name: 'p0p2b0b2_PNG_test'
 
 k_edges:
@@ -29,7 +29,7 @@ k_edges:
 
 mean_density: 2.e-4
 redshift: 1.4
-cache_path: '/cosma/apps/dp322/dc-guan2/emulator/QSO/cosmo2/cache/z1.4/'
+cache_path: '/Users/austerlitz/Desktop/TripoSH-Fitting-v2/cache/QSO/z1.4/'
 
 prior:
     'omega_cdm':
