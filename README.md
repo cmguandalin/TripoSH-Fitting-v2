@@ -33,15 +33,15 @@ The code performs the following tasks:
 
 ## Requirements ----> UNDER DEVELOPMENT
 
-- Python 3.7 or higher
-- Required Python packages:
-  - `numpy`
-  - `scipy`
+- Required Python (version 3.10) packages:
+  - `numpy` (1.26.4)
+  - `scipy` (1.14.0)
   - `yaml`
   - `pocoMC` (version 1.2.6)
   - `tensorflow` (version 2.15.0 or higher)
   - `keras` (version 2.15.0 or higher)
   - `multiprocessing`
+  - CLASS-PT
 
 You can install the required packages using `pip`:
 
