@@ -68,15 +68,21 @@ if __name__ == '__main__':
     redshift     = config['redshift']
     cache_path   = config['cache_path']
 
+    #For window matrices
+    wcmat_path = config['window_path']
+
 
     #######################
     # CLEANING PARAMETERS #
     #######################
+    fixed = []
 
     # Iterate over a copy of the dictionary to avoid modifying it while iterating
     for param, prior_info in list(priors.items()):
         if prior_info['type'] == 'Fix':
+            fixed.append(priors[param])
             del priors[param]
+    print(fixed)
 
     #############
     # LOAD DATA #
@@ -98,11 +104,17 @@ if __name__ == '__main__':
     inv_cov = hartlap * np.linalg.inv(covariance)
 
     ################
+    # LOAD WINDOW MATRICES #
+    ################
+    window_loader = dload.WindowLoader(wcmat_path, multipoles)
+    wcmat_dict = window_loader.load_windows()
+
+    ################
     # MODEL VECTOR #
     ################
     # Initialise the emulator
-    calculator = model.PkBkCalculator(multipoles, mean_density, redshift, cache_path, fixed_params=['n_s'], rescale_kernels=True, ordering=1)
-    model_function = model.ModellingFunction(priors, data, calculator, multipoles)
+    calculator = model.PkBkCalculator(multipoles, mean_density, redshift, cache_path, fixed_params=['n_s'] , rescale_kernels=True, ordering=1)
+    model_function = model.ModellingFunction(priors, data, calculator, multipoles, wcmat_dict)
 
     ##############
     # LIKELIHOOD #

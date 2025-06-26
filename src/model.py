@@ -426,7 +426,7 @@ class PkBkCalculator:
         print(self.help.__doc__)
 
 class ModellingFunction:
-    def __init__(self, priors, data, calculator, multipoles):
+    def __init__(self, priors, data, calculator, multipoles, window_dict):
         """
         Initialize the ModellingFunction class.
 
@@ -441,6 +441,7 @@ class ModellingFunction:
         self.calculator = calculator
         self.multipoles = multipoles
         self.fixed_params = self._extract_fixed_params()
+        self.wcmat = window_dict
 
     def _extract_fixed_params(self):
         """
@@ -457,6 +458,89 @@ class ModellingFunction:
             if prior_info['type'] == 'Fix' and param != 'n_s':
                 fixed_params[param] = prior_info['lim']
         return fixed_params
+    
+    
+    def window_conv_bk(self, l1_, l2_, L_, pars, wcmat, k_data, k_window):
+
+        """
+        Window convolve the model vector for the bispectrum with window matrices,
+
+        Args:
+            l_1, l_2, L_ (int): The multipoles for the bispectrum. Eg. l1_ = 2, l2_ = 0, L_ = 2 
+            model_vector (np.ndarray): The model vector to be convolved.
+            window_matrices (array): Array of window matrices for the multipole.
+            k_data (np.ndarray): The k values from the data.
+            k_theory (np.ndarray): The k values from the theory calculation
+
+        Returns:
+            np.ndarray: The convolved model vector.
+        """
+
+        k_values = np.array(np.meshgrid(k_window, k_window, indexing='ij')).flatten()
+        print(pars)       
+
+        if l1_ == l2_ == L_ == 0:
+
+            precomputed_B000 = self.calculator.bk_from_emulator(pars, '000')(k_values)
+            precomputed_B110 = self.calculator.bk_from_emulator(pars, '110')(k_values)
+            precomputed_B220 = self.calculator.bk_from_emulator(pars, '220')(k_values)
+
+            combined = np.concatenate([precomputed_B000.flatten(), precomputed_B110.flatten(), precomputed_B220.flatten()],axis=0)
+            convolved_model = np.dot(wcmat, combined)
+
+
+        elif (l1_ == L_ == 2) & (l2_ == 0):
+
+            precomputed_B000 = self.calculator.bk_from_emulator(pars, '000')(k_values)
+            precomputed_B112 = self.calculator.bk_from_emulator(pars, '112')(k_values)
+            precomputed_B202 = self.calculator.bk_from_emulator(pars, '202')(k_values)
+            precomputed_B312 = self.calculator.bk_from_emulator(pars, '312')(k_values)
+
+            combined = np.concatenate([precomputed_B000.flatten(), precomputed_B112.flatten(), precomputed_B202.flatten(), precomputed_B312.flatten()],axis=0)
+            convolved_model = np.dot(wcmat, combined)
+
+        else: 
+            raise NotImplementedError("Model vector window convolution is only supported for B000 & B202 multipoles ")
+        
+        #pick_Bk = np.reshape(convolved_model[0:, np.newaxis], (64, 64))
+        reshaped_bispectrum = convolved_model #np.diag(pick_Bk)
+
+        conv_reshaped_bk = np.interp(k_data, k_window, reshaped_bispectrum)
+
+        return conv_reshaped_bk
+    
+
+    def window_conv_pk(self, pars, window_matrices, k_data, k_window):
+
+        """
+        Window convolve the model vector for the power spectrum with the window matrices        
+
+        Args: 
+            ell (int): The multipole for the power spectrum. Eg. ell = 0, 2, 4
+            model_vector (np.ndarray): The model vector to be convolved.
+            window_matrices (array): Array of window matrices for the multipole.
+            k_data (np.ndarray): The k values from the data.
+            k_theory (np.ndarray): The k values from the theory calculation
+
+        Returns:
+            np.ndarray: The convolved model vector.
+        """
+
+        #k_theory = 
+
+        precomputed_P0 = self.calculator.pk_from_emulator(pars, '0')(k_window)
+        precomputed_P2 = self.calculator.pk_from_emulator(pars, '2')(k_window)
+        precomputed_P4 = self.calculator.pk_from_emulator(pars, '4')(k_window)
+
+        combined = np.concatenate([precomputed_P0, precomputed_P2, precomputed_P4],axis=0)
+        convolved_model = np.dot(window_matrices, combined)
+
+        p_0 = convolved_model[0:len(k_window)]
+        p_2 = convolved_model[len(k_window):2*len(k_window)]
+        p_4 = convolved_model[2*len(k_window):3*len(k_window)]
+
+        
+        return p_0, p_2, p_4
 
     def compute_model_vector(self, theta):
         """
@@ -494,7 +578,15 @@ class ModellingFunction:
         if multipoles_bk:
             for l1l2L in multipoles_bk:
                 k_from_data = self.data[l1l2L]['k']
-                model_bk = self.calculator.bk_from_emulator(full_params, l1l2L)(k_from_data)
+                model_bk = self.window_conv_bk(
+                    l1_=int(l1l2L[0]), 
+                    l2_=int(l1l2L[1]), 
+                    L_=int(l1l2L[2]), 
+                    pars=full_params, 
+                    wcmat=self.wcmat[l1l2L]['window'], 
+                    k_data=k_from_data, 
+                    k_window=self.wcmat[l1l2L]['k_window']
+                )
                 model_vector.append(model_bk)
 
         # Concatenate the model predictions into a single array

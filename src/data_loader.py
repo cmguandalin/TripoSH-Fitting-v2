@@ -1,4 +1,6 @@
 import numpy as np
+import h5py
+import os
 
 class DataLoader:
     def __init__(self, data_path, data_files, multipoles):
@@ -79,3 +81,33 @@ class DataLoader:
                     self.full_data = np.concatenate((self.full_data, values['Bk']))
         
         return self.full_k, self.full_data
+    
+class WindowLoader: 
+
+    def __init__(self, wcmat_path, multipoles):
+        self.window_path = wcmat_path
+        self.multipoles = multipoles
+        self.windows = {}
+
+    def load_windows(self):
+        self.multipoles_pk = {i for i in self.multipoles if len(i) == 1} or None
+        self.multipoles_bk = {i for i in self.multipoles if len(i) == 3} or None
+
+        print(f'Initialising window functions from {self.window_path}.')
+
+        for ell, file_name in zip(self.multipoles_bk, self.window_path):
+
+            path_to_file = self.window_path
+            file = h5py.File(path_to_file, 'r')
+
+            tmp_k = file['sampts_in']
+            tmp_window = file['wcmat_diag']
+
+            self.windows[ell] = {}
+            self.windows[ell]['k_window'] = tmp_k
+            self.windows[ell]['window'] = tmp_window
+
+        return self.windows
+    
+    def get_windows(self):
+        return self.windows
