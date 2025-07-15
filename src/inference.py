@@ -70,19 +70,17 @@ if __name__ == '__main__':
 
     #For window matrices
     wcmat_path = config['window_path']
-
+    wcmat_files_pk = os.path.join(wcmat_path, config['window_files']['pk'])
+    wcmat_files_000 = os.path.join(wcmat_path, config['window_files']['000'])
 
     #######################
     # CLEANING PARAMETERS #
     #######################
-    fixed = []
 
-    # Iterate over a copy of the dictionary to avoid modifying it while iterating
+    parameters_to_be_varied = priors.copy()
     for param, prior_info in list(priors.items()):
         if prior_info['type'] == 'Fix':
-            fixed.append(priors[param])
-            del priors[param]
-    print(fixed)
+            del parameters_to_be_varied[param]
 
     #############
     # LOAD DATA #
@@ -106,14 +104,16 @@ if __name__ == '__main__':
     ################
     # LOAD WINDOW MATRICES #
     ################
-    window_loader = dload.WindowLoader(wcmat_path, multipoles)
+    window_loader = dload.WindowLoader(wcmat_files_000, wcmat_files_pk, multipoles)
     wcmat_dict = window_loader.load_windows()
+
+    print(wcmat_dict)
 
     ################
     # MODEL VECTOR #
     ################
     # Initialise the emulator
-    calculator = model.PkBkCalculator(multipoles, mean_density, redshift, cache_path, fixed_params=['n_s'] , rescale_kernels=True, ordering=1)
+    calculator = model.PkBkCalculator(multipoles, mean_density, redshift, cache_path, fixed_params=['omega_cdm', 'omega_b', 'ln10^{10}A_s', 'n_s'], rescale_kernels=True, ordering=1)
     model_function = model.ModellingFunction(priors, data, calculator, multipoles, wcmat_dict)
 
     ##############
@@ -175,7 +175,7 @@ if __name__ == '__main__':
     print(f"Results saved to {os.path.join(path_to_save, file_name + '.npy')}")
 
     results = {}
-    results['priors'] = priors
+    results['priors'] = parameters_to_be_varied
     results['samples'] = samples
     results['weights'] = weights
     results['logl'] = logl

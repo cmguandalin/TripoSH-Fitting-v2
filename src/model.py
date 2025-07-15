@@ -27,8 +27,9 @@ Use calculator.help() for a quick documentation.
 """ 
 
 import numpy as np
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, RectBivariateSpline
 import bicker.emulator as BICKER
+from pypower import BaseMatrix
 from time import time 
 import os
 import re
@@ -216,15 +217,56 @@ class PkBkCalculator:
         return group_to_emul
     
     def _get_cosmo_params(self, pars):
-        # Helper function to get cosmological parameters from the full EFT parameters
-        # Used in the pk_from_emulator function.
+        """
+            Helper function to get cosmological parameters from the full EFT parameters.
+            Handles cases where emulator was trained with:
+            - All 5 standard cosmological parameters
+            - Just 4 parameters (excluding n_s)
+            - Just a single parameter (e.g., h)
+        """
         default_ns = 0.9649
 
+        # Case 1: emulator was trained with only one cosmological parameter (e.g., h)
+        if len(self.fixed_params) == 4:  # Only one parameter is not fixed
+            # Determine which parameter is not fixed (the one that was trained)
+            trained_param = [p for p in ['omega_cdm', 'omega_b', 'h', 'ln10^{10}A_s', 'n_s'] 
+                            if p not in self.fixed_params][0]
+            return [pars[trained_param]]
+
+        # Case 2: emulator was trained with all parameters (n_s can vary)
+        elif self.fixed_params is None: 
+            if 'n_s' not in pars:  # n_s not varied in the sampling
+                if self.ordering == 0:
+                    return [pars['omega_cdm'], pars['omega_b'], pars['h'], 
+                           pars['ln10^{10}A_s'], default_ns]
+                else:
+                    return [pars['omega_b'], pars['h'], pars['omega_cdm'], 
+                           pars['ln10^{10}A_s'], default_ns]
+            else:  # n_s is varied in the sampling
+                if self.ordering == 0:
+                    return [pars['omega_cdm'], pars['omega_b'], pars['h'], 
+                           pars['ln10^{10}A_s'], pars['n_s']]
+                else:
+                    return [pars['omega_b'], pars['h'], pars['omega_cdm'], 
+                           pars['ln10^{10}A_s'], pars['n_s']]
+        # Case 3: emulator was trained without n_s (fixed)
+        elif 'n_s' in self.fixed_params:
+            if 'n_s' not in pars:
+                if self.ordering == 0:
+                    return [pars['omega_cdm'], pars['omega_b'], pars['h'], 
+                           pars['ln10^{10}A_s']]
+                else:
+                    return [pars['omega_b'], pars['h'], pars['omega_cdm'], 
+                           pars['ln10^{10}A_s']]
+            else:
+                raise ValueError("n_s was not included in the emulator training. "
+                               "Fix this parameter in the sampling procedure.")
+            
         if self.fixed_params is None: 
             # n_s was included in the training of the emulator
             if 'n_s' not in pars:
                 # but is not varied in the MCMC analysis
-                
+
                 if self.ordering == 0:
                     return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s'], default_ns]
                 else:
@@ -244,6 +286,14 @@ class PkBkCalculator:
                     return [pars['omega_b'], pars['h'], pars['omega_cdm'], pars['ln10^{10}A_s']]
             else:
                 raise ValueError(f"n_s was not included in the training of the emulator, therefore it cannot be varied. Fix this parameter to its fiducial value in the sampling procedure.")
+
+        # Case 4: other combinations (e.g., 2-3 parameters trained)
+        #NEED A PROPER HANDLING... THIS IS GETTING TO COMPLICATED!!!
+
+        else:
+            # Return only the parameters that were trained (not in fixed_params_emu)
+            trained_params = [p for p in ['omega_cdm', 'omega_b', 'h', 'ln10^{10}A_s', 'n_s'] if p not in self.fixed_params]
+            return [pars[p] for p in trained_params]
                 
     '''
         Main functions
@@ -286,7 +336,7 @@ class PkBkCalculator:
 
         return self.emulator_bk[ell][gp].kbins, self.kernels
             
-    def pk_from_emulator(self, pars, ell):
+    def pk_from_emulator(self, pars, ell, return_shot=False):
         """
         Get power spectrum from emulator for given EFT parameters and multipole ell.
 
@@ -310,7 +360,7 @@ class PkBkCalculator:
         # Determine counterterms for each multipole and compute power spectrum from the emulator
         if ell == '0':
             c0 = pars.get('c0', 0.0)
-            self.Pk_ell = self.emulator_pk[ell].emu_predict(cosmo_pars, [b1, b2, bG2, bGamma3, ch, c0])[0] + self.Pstoch
+            self.Pk_ell = self.emulator_pk[ell].emu_predict(cosmo_pars, [b1, b2, bG2, bGamma3, ch, c0])[0] #+ self.Pstoch
         elif ell == '2':
             c2pp = pars.get('c2pp', 0.0)
             self.Pk_ell = self.emulator_pk[ell].emu_predict(cosmo_pars, [b1, b2, bG2, bGamma3, ch, c2pp])[0]
@@ -322,7 +372,8 @@ class PkBkCalculator:
 
         self.interp_function = interp1d(self.kemul_pk, self.Pk_ell, kind='cubic', fill_value='extrapolate')
         
-        return self.interp_function
+        return (self.interp_function, self.Pstoch) if return_shot else self.interp_function
+
             
     def bk_from_emulator(self, pars,l1l2L):
         """
@@ -379,7 +430,8 @@ class PkBkCalculator:
         if Pshot != 0: 
             self.bk_model += ((1+Pshot)/self.mean_density)**2
 
-        self.interp_function = interp1d(self.kernels_k, self.bk_model, kind='cubic', fill_value='extrapolate')
+        self.interp_function = RectBivariateSpline(x= self.kernels_k, y = self.kernels_k, z = self.bk_model.reshape((len(self.kernels_k), len(self.kernels_k))))  
+        #self.interp_function = interp1d(self.kernels_k, self.bk_model, kind='cubic', fill_value='extrapolate')
         
         return self.interp_function
 
@@ -476,14 +528,11 @@ class ModellingFunction:
             np.ndarray: The convolved model vector.
         """
 
-        k_values = np.array(np.meshgrid(k_window, k_window, indexing='ij')).flatten()
-        print(pars)       
-
         if l1_ == l2_ == L_ == 0:
 
-            precomputed_B000 = self.calculator.bk_from_emulator(pars, '000')(k_values)
-            precomputed_B110 = self.calculator.bk_from_emulator(pars, '110')(k_values)
-            precomputed_B220 = self.calculator.bk_from_emulator(pars, '220')(k_values)
+            precomputed_B000 = self.calculator.bk_from_emulator(pars, '000')(k_window, k_window)
+            precomputed_B110 = self.calculator.bk_from_emulator(pars, '110')(k_window, k_window)
+            precomputed_B220 = self.calculator.bk_from_emulator(pars, '220')(k_window, k_window)
 
             combined = np.concatenate([precomputed_B000.flatten(), precomputed_B110.flatten(), precomputed_B220.flatten()],axis=0)
             convolved_model = np.dot(wcmat, combined)
@@ -491,10 +540,10 @@ class ModellingFunction:
 
         elif (l1_ == L_ == 2) & (l2_ == 0):
 
-            precomputed_B000 = self.calculator.bk_from_emulator(pars, '000')(k_values)
-            precomputed_B112 = self.calculator.bk_from_emulator(pars, '112')(k_values)
-            precomputed_B202 = self.calculator.bk_from_emulator(pars, '202')(k_values)
-            precomputed_B312 = self.calculator.bk_from_emulator(pars, '312')(k_values)
+            precomputed_B000 = self.calculator.bk_from_emulator(pars, '000')(k_window, k_window)
+            precomputed_B112 = self.calculator.bk_from_emulator(pars, '112')(k_window, k_window)
+            precomputed_B202 = self.calculator.bk_from_emulator(pars, '202')(k_window, k_window)
+            precomputed_B312 = self.calculator.bk_from_emulator(pars, '312')(k_window, k_window)
 
             combined = np.concatenate([precomputed_B000.flatten(), precomputed_B112.flatten(), precomputed_B202.flatten(), precomputed_B312.flatten()],axis=0)
             convolved_model = np.dot(wcmat, combined)
@@ -510,7 +559,7 @@ class ModellingFunction:
         return conv_reshaped_bk
     
 
-    def window_conv_pk(self, pars, window_matrices, k_data, k_window):
+    def window_conv_pk(self, pars, window_matrix):
 
         """
         Window convolve the model vector for the power spectrum with the window matrices        
@@ -526,21 +575,25 @@ class ModellingFunction:
             np.ndarray: The convolved model vector.
         """
 
-        #k_theory = 
+        k_in  = window_matrix.xin[0]      
 
-        precomputed_P0 = self.calculator.pk_from_emulator(pars, '0')(k_window)
-        precomputed_P2 = self.calculator.pk_from_emulator(pars, '2')(k_window)
-        precomputed_P4 = self.calculator.pk_from_emulator(pars, '4')(k_window)
+        interp_P0, shot0 = self.calculator.pk_from_emulator(pars, '0', return_shot=True)
+        interp_P2        = self.calculator.pk_from_emulator(pars, '2')
+        interp_P4        = self.calculator.pk_from_emulator(pars, '4')
 
-        combined = np.concatenate([precomputed_P0, precomputed_P2, precomputed_P4],axis=0)
-        convolved_model = np.dot(window_matrices, combined)
-
-        p_0 = convolved_model[0:len(k_window)]
-        p_2 = convolved_model[len(k_window):2*len(k_window)]
-        p_4 = convolved_model[2*len(k_window):3*len(k_window)]
-
+        P0 = interp_P0(k_in)      
+        P2 = interp_P2(k_in)
+        P4 = interp_P4(k_in)
         
-        return p_0, p_2, p_4
+
+        combined = np.concatenate([P0, P2, P4])
+
+        P0_w, P2_w, P4_w = window_matrix.dot(combined, unpack=True)
+
+        #P0_w += shot0 * window_matrix.vectorout[0]
+        
+        return P0_w, P2_w, P4_w
+    
 
     def compute_model_vector(self, theta):
         """
@@ -569,10 +622,16 @@ class ModellingFunction:
 
         # Compute power spectrum predictions
         if multipoles_pk:
-            for L in multipoles_pk:
-                k_from_data = self.data[L]['k']
-                model_pk = self.calculator.pk_from_emulator(full_params, L)(k_from_data)
-                model_vector.append(model_pk)
+    
+            P0_w, P2_w, P4_w = self.window_conv_pk(pars = full_params, 
+                                            window_matrix= self.wcmat['pk']['window'])
+            k_data = self.data['0']['k']  
+            p0_w = np.interp(k_data, self.wcmat['pk']['window'].xout[0], P0_w)
+            p2_w = np.interp(k_data, self.wcmat['pk']['window'].xout[0], P2_w)
+            p4_w = np.interp(k_data, self.wcmat['pk']['window'].xout[0], P4_w)
+
+            model_vector.append(np.concatenate([p0_w, p2_w, p4_w]))  
+                #model_vector.append(model_pk)
 
         # Compute bispectrum predictions
         if multipoles_bk:

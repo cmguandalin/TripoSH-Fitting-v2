@@ -1,6 +1,7 @@
 import numpy as np
 import h5py
 import os
+from pypower import BaseMatrix
 
 class DataLoader:
     def __init__(self, data_path, data_files, multipoles):
@@ -84,8 +85,9 @@ class DataLoader:
     
 class WindowLoader: 
 
-    def __init__(self, wcmat_path, multipoles):
+    def __init__(self, wcmat_path, wcmat_path_pk, multipoles):
         self.window_path = wcmat_path
+        self.window_path_pk = wcmat_path_pk
         self.multipoles = multipoles
         self.windows = {}
 
@@ -95,17 +97,24 @@ class WindowLoader:
 
         print(f'Initialising window functions from {self.window_path}.')
 
-        for ell, file_name in zip(self.multipoles_bk, self.window_path):
+        if self.multipoles_pk:
 
-            path_to_file = self.window_path
-            file = h5py.File(path_to_file, 'r')
+            file = BaseMatrix.load(self.window_path_pk)
+            self.windows['pk'] = {}
+            self.windows['pk']['window'] = file
 
-            tmp_k = file['sampts_in']
-            tmp_window = file['wcmat_diag']
+        if self.multipoles_bk:
+            for ell, file_name in zip(self.multipoles_bk, self.window_path):
 
-            self.windows[ell] = {}
-            self.windows[ell]['k_window'] = tmp_k
-            self.windows[ell]['window'] = tmp_window
+                path_to_file = self.window_path
+                file = h5py.File(path_to_file, 'r')
+
+                tmp_k = np.array((file['sampts_in']))
+                tmp_window = np.array((file['wcmat_diag']))
+
+                self.windows[ell] = {}
+                self.windows[ell]['k_window'] = tmp_k
+                self.windows[ell]['window'] = tmp_window
 
         return self.windows
     
