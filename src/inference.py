@@ -10,9 +10,15 @@ import likelihood as clike
 import model
 from datetime import datetime
 from multiprocessing import Pool
+import multiprocessing as mp
+import logging
+logger = logging.getLogger(__name__)
+logging.captureWarnings(True)
+print(logging.raiseExceptions)
 
 os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
 sys.stderr = sys.stdout
+mp.set_start_method("fork", force=True)
 
 # Global variables (avoid passing them as arguments) - this should make the sampler faster in slurm
 global global_full_data, global_inv_cov, global_likelihood
@@ -35,10 +41,25 @@ if __name__ == '__main__':
     parser.add_argument('-ncpus', type=int, help='Number of CPUs in a PC to use.', required=False, default=1)
     cmdline = parser.parse_args()
 
-    print(f'Using {cmdline.config}')
+    #print(f'Using {cmdline.config}')
 
     with open(cmdline.config, 'r') as file:
         config = yaml.safe_load(file)
+
+    logging.basicConfig(
+    format='%(levelname)s %(asctime)s: %(message)s',
+    datefmt='%m/%d/%Y %I:%M:%S %p',
+    filename=os.path.join(config['path_to_save'], f"{config['file_name']}.log"),
+    level=logging.INFO,filemode="w", force= True
+)
+
+    # Add terminal output
+    console = logging.StreamHandler(sys.stdout)   # omit sys.stdout to use stderr
+    console.setLevel(logging.INFO)
+    console.setFormatter(logging.Formatter('%(levelname)s %(asctime)s: %(message)s',
+                                        '%m/%d/%Y %I:%M:%S %p'))
+    logging.getLogger().addHandler(console)
+    logging.info(f'Starting script with configuration: {cmdline.config}')
 
     # Get the path for data and covariance files
     data_path = config['data_path']
@@ -70,8 +91,41 @@ if __name__ == '__main__':
 
     #For window matrices
     wcmat_path = config['window_path']
-    wcmat_files_pk = os.path.join(wcmat_path, config['window_files']['pk'])
-    wcmat_files_000 = os.path.join(wcmat_path, config['window_files']['000'])
+
+    wcmat_files_pk  = None 
+    wcmat_files_000 = None
+    wcmat_files_202 = None
+
+    
+    if 'pk' in config['window_files']:
+        wcmat_files_pk = os.path.join(
+            wcmat_path,
+            config['window_files']['pk']
+        )
+
+    if '000' in config['window_files']:         
+        wcmat_files_000 = os.path.join(
+            wcmat_path,
+            config['window_files']['000']
+        )
+    if '202' in config['window_files']:
+        wcmat_files_202 = os.path.join(
+            wcmat_path,
+            config['window_files']['202']
+        )
+
+    multipoles_for_emu= []
+    for ell in multipoles:
+        multipoles_for_emu.append(ell)
+        if ell == '000':
+            multipoles_for_emu.append('110')
+            multipoles_for_emu.append('220')
+        if ell =='2':
+            multipoles_for_emu.append('4')
+        if ell == '202':
+            multipoles_for_emu.append('112')
+            multipoles_for_emu.append('312')
+        
 
     #######################
     # CLEANING PARAMETERS #
@@ -104,16 +158,14 @@ if __name__ == '__main__':
     ################
     # LOAD WINDOW MATRICES #
     ################
-    window_loader = dload.WindowLoader(wcmat_files_000, wcmat_files_pk, multipoles)
+    window_loader = dload.WindowLoader([wcmat_files_000, wcmat_files_202], wcmat_files_pk, multipoles)
     wcmat_dict = window_loader.load_windows()
-
-    print(wcmat_dict)
 
     ################
     # MODEL VECTOR #
     ################
     # Initialise the emulator
-    calculator = model.PkBkCalculator(multipoles, mean_density, redshift, cache_path, fixed_params=['omega_cdm', 'omega_b', 'ln10^{10}A_s', 'n_s'], rescale_kernels=True, ordering=1)
+    calculator = model.PkBkCalculator(multipoles_for_emu, mean_density, redshift, cache_path, fixed_params=['omega_cdm', 'omega_b', 'ln10^{10}A_s', 'n_s'], rescale_kernels=False, ordering=1)
     model_function = model.ModellingFunction(priors, data, calculator, multipoles, wcmat_dict)
 
     ##############
@@ -141,7 +193,7 @@ if __name__ == '__main__':
     else:
         ncpus = 1
 
-    print(f'Starting sampling at {datetime.now()} with {ncpus} CPUs. \n')
+    logging.info(f'Starting sampling at {datetime.now()} with {ncpus} CPUs. \n')
 
     if ncpus > 1:
         with Pool(ncpus) as pool:
@@ -153,26 +205,33 @@ if __name__ == '__main__':
                 output_dir=path_to_save,
                 output_label=file_name
             )
-            sampler.run(n_total=ntot, progress=True, save_every=200)
-
+            try: 
+                sampler.run(n_total=ntot, progress=True, save_every=200)
+            except: 
+                logging.error("An error occurred during sampling. Please check below for details: ", exc_info=True)
+                raise
     else:
-        sampler = pc.Sampler(
-            prior=prior,
-            likelihood=likelihood_wrapper,
-            n_effective=neff,
-            output_dir=path_to_save,
-            output_label=file_name
-        )
-        sampler.run(n_total=ntot, progress=True, save_every=200)
+        try: 
+            sampler = pc.Sampler(
+                prior=prior,
+                likelihood=likelihood_wrapper,
+                n_effective=neff,
+                output_dir=path_to_save,
+                output_label=file_name
+            )
+            sampler.run(n_total=ntot, progress=True, save_every=200)
+        except:
+            logging.error("An error occurred during sampling. Please check below for details: ", exc_info=True)
+            raise
 
     samples, weights, logl, logp = sampler.posterior()
 
-    print(f"Sampling ended at: {datetime.now()}")
+    logging.info(f"Sampling ended at: {datetime.now()}")
 
     # Save results
     os.makedirs(path_to_save, exist_ok=True)
 
-    print(f"Results saved to {os.path.join(path_to_save, file_name + '.npy')}")
+    logging.info(f"Results saved to {os.path.join(path_to_save, file_name + '.npy')}")
 
     results = {}
     results['priors'] = parameters_to_be_varied
@@ -185,5 +244,7 @@ if __name__ == '__main__':
 
     time_f = time()
 
-    print('Sampling efficiency:', sampler.results["efficiency"])
-    print('Time to estimate (in minutes):', np.round((time_f-time_i)/60,2))
+    logging.info('Sampling efficiency:', sampler.results["efficiency"])
+    logging.info('Time to estimate (in minutes):', np.round((time_f-time_i)/60,2))
+    logging.shutdown()
+

@@ -33,6 +33,7 @@ from pypower import BaseMatrix
 from time import time 
 import os
 import re
+import logging
 
 group = [
             ['c2_b2_f', 'c2_b1_b2',  'c2_b1_b1',  'c2_b1_f', 'c2_b1_f', 'c1_b1_b1_f', 
@@ -129,8 +130,8 @@ class PkBkCalculator:
         - fixed_params (list of str)
         - rescale_kernels (bool)
         """
-
-        print('Initialising PkBkCalculator.\n')
+        log = logging.getLogger(__name__)
+        log.info('Initialising PkBkCalculator.\n')
         time_i = time()
 
         self.cache_path = cache_path
@@ -171,10 +172,10 @@ class PkBkCalculator:
 
         ######
         # Done
-        print(f'Total time to initialise the calculator: {round(time_f-time_i,2)} seconds.') 
-        print(f'You can now compute the {self.multipoles_pk} power spectrum and {self.multipoles_bk} bispectrum multipoles.')
-        print(f'Use the function help() for further guidance.')
-        
+        log.info(f'Total time to initialise the calculator: {round(time_f-time_i,2)} seconds.') 
+        log.info(f'You can now compute the {self.multipoles_pk} power spectrum and {self.multipoles_bk} bispectrum multipoles.')
+        log.info(f'Use the function help() for further guidance.')
+
     '''
         Helper functions
     '''
@@ -512,7 +513,7 @@ class ModellingFunction:
         return fixed_params
     
     
-    def window_conv_bk(self, l1_, l2_, L_, pars, wcmat, k_data, k_window):
+    def window_conv_bk(self, l1_, l2_, L_, pars, wcmat, k_data, k_window, k_window_out):
 
         """
         Window convolve the model vector for the bispectrum with window matrices,
@@ -527,7 +528,7 @@ class ModellingFunction:
         Returns:
             np.ndarray: The convolved model vector.
         """
-
+        #print(wcmat.shape, flush=True)
         if l1_ == l2_ == L_ == 0:
 
             precomputed_B000 = self.calculator.bk_from_emulator(pars, '000')(k_window, k_window)
@@ -539,7 +540,7 @@ class ModellingFunction:
 
 
         elif (l1_ == L_ == 2) & (l2_ == 0):
-
+            #print(wcmat.shape)
             precomputed_B000 = self.calculator.bk_from_emulator(pars, '000')(k_window, k_window)
             precomputed_B112 = self.calculator.bk_from_emulator(pars, '112')(k_window, k_window)
             precomputed_B202 = self.calculator.bk_from_emulator(pars, '202')(k_window, k_window)
@@ -554,12 +555,12 @@ class ModellingFunction:
         #pick_Bk = np.reshape(convolved_model[0:, np.newaxis], (64, 64))
         reshaped_bispectrum = convolved_model #np.diag(pick_Bk)
 
-        conv_reshaped_bk = np.interp(k_data, k_window, reshaped_bispectrum)
+        conv_reshaped_bk = np.interp(k_data, k_window_out, reshaped_bispectrum)
 
         return conv_reshaped_bk
     
 
-    def window_conv_pk(self, pars, window_matrix):
+    def window_conv_pk(self, pars, window_matrix, k_data):
 
         """
         Window convolve the model vector for the power spectrum with the window matrices        
@@ -574,8 +575,12 @@ class ModellingFunction:
         Returns:
             np.ndarray: The convolved model vector.
         """
+        k_window_in = np.loadtxt('/Users/aadityasarma/Documents/Repositories/TripoSH-Fitting-v2/data/LRG_cutsky/k_window_in.txt')
+        k_window_out = np.loadtxt('/Users/aadityasarma/Documents/Repositories/TripoSH-Fitting-v2/data/LRG_cutsky/k_window_out.txt')
 
-        k_in  = window_matrix.xin[0]      
+        window_matrix.select_x((k_window_in[0], k_window_in[-1]), (k_window_out[0], k_window_out[-1]))
+        k_in  = window_matrix.xin[0] 
+        k_out = window_matrix.xout[0]     
 
         interp_P0, shot0 = self.calculator.pk_from_emulator(pars, '0', return_shot=True)
         interp_P2        = self.calculator.pk_from_emulator(pars, '2')
@@ -590,9 +595,14 @@ class ModellingFunction:
 
         P0_w, P2_w, P4_w = window_matrix.dot(combined, unpack=True)
 
+        p0_w = np.interp(k_data, k_out, P0_w)
+        p2_w = np.interp(k_data, k_out, P2_w)
+        p4_w = np.interp(k_data, k_out, P4_w)
+
+
         #P0_w += shot0 * window_matrix.vectorout[0]
         
-        return P0_w, P2_w, P4_w
+        return p0_w, p2_w, p4_w
     
 
     def compute_model_vector(self, theta):
@@ -623,19 +633,17 @@ class ModellingFunction:
         # Compute power spectrum predictions
         if multipoles_pk:
     
-            P0_w, P2_w, P4_w = self.window_conv_pk(pars = full_params, 
-                                            window_matrix= self.wcmat['pk']['window'])
-            k_data = self.data['0']['k']  
-            p0_w = np.interp(k_data, self.wcmat['pk']['window'].xout[0], P0_w)
-            p2_w = np.interp(k_data, self.wcmat['pk']['window'].xout[0], P2_w)
-            p4_w = np.interp(k_data, self.wcmat['pk']['window'].xout[0], P4_w)
+            P0_w, P2_w, _ = self.window_conv_pk(pars = full_params, 
+                                            window_matrix= self.wcmat['pk']['window'],
+                                            k_data = self.data['0']['k'])
 
-            model_vector.append(np.concatenate([p0_w, p2_w, p4_w]))  
+            model_vector.append(np.concatenate([P0_w, P2_w]))  
                 #model_vector.append(model_pk)
 
         # Compute bispectrum predictions
         if multipoles_bk:
             for l1l2L in multipoles_bk:
+                #print(self.wcmat[l1l2L])
                 k_from_data = self.data[l1l2L]['k']
                 model_bk = self.window_conv_bk(
                     l1_=int(l1l2L[0]), 
@@ -644,7 +652,8 @@ class ModellingFunction:
                     pars=full_params, 
                     wcmat=self.wcmat[l1l2L]['window'], 
                     k_data=k_from_data, 
-                    k_window=self.wcmat[l1l2L]['k_window']
+                    k_window=self.wcmat[l1l2L]['k_window'],
+                    k_window_out = self.wcmat[l1l2L]['k_window_out']
                 )
                 model_vector.append(model_bk)
 

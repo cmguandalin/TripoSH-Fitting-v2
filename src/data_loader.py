@@ -2,6 +2,7 @@ import numpy as np
 import h5py
 import os
 from pypower import BaseMatrix
+import logging
 
 class DataLoader:
     def __init__(self, data_path, data_files, multipoles):
@@ -13,11 +14,12 @@ class DataLoader:
     def load_data(self, k_edges):
         self.multipoles_pk = {i for i in self.multipoles if len(i) == 1} or None
         self.multipoles_bk = {i for i in self.multipoles if len(i) == 3} or None
+        log = logging.getLogger(__name__)
 
         if self.multipoles_pk:
-            print(f'Initialising power spectrum data from {self.data_path}.')
+            log.info(f'Initialising power spectrum data from {self.data_path}.')
             for ell in self.multipoles_pk:
-                print(f'{ell}: {self.data_files[ell]}')
+                log.info(f'{ell}: {self.data_files[ell]}')
                 path_to_file = self.data_path + self.data_files[ell]
                 tmp_k, tmp_pk = np.loadtxt(path_to_file, unpack=True)
                 self.data[ell] = {}
@@ -26,10 +28,10 @@ class DataLoader:
                 self.data[ell]['Pk'] = tmp_pk[mask]
                 
         if self.multipoles_bk:
-            print(f'Initialising bispectrum data from {self.data_path}.')
+            log.info(f'Initialising bispectrum data from {self.data_path}.')
             for ell in self.multipoles_bk:
                 path_to_file = self.data_path + self.data_files[ell]
-                print(f'{ell}: {self.data_files[ell]}')
+                log.info(f'{ell}: {self.data_files[ell]}')
                 tmp_k, tmp_bk = np.loadtxt(path_to_file, unpack=True)
                 self.data[ell] = {}
                 mask = (tmp_k >= min(k_edges[ell])) & (tmp_k <= max(k_edges[ell]))
@@ -94,8 +96,8 @@ class WindowLoader:
     def load_windows(self):
         self.multipoles_pk = {i for i in self.multipoles if len(i) == 1} or None
         self.multipoles_bk = {i for i in self.multipoles if len(i) == 3} or None
-
-        print(f'Initialising window functions from {self.window_path}.')
+        log = logging.getLogger(__name__)
+        log.info(f'Initialising window functions from {self.window_path}.')
 
         if self.multipoles_pk:
 
@@ -106,14 +108,16 @@ class WindowLoader:
         if self.multipoles_bk:
             for ell, file_name in zip(self.multipoles_bk, self.window_path):
 
-                path_to_file = self.window_path
+                path_to_file = file_name 
                 file = h5py.File(path_to_file, 'r')
 
                 tmp_k = np.array((file['sampts_in']))
-                tmp_window = np.array((file['wcmat_diag']))
+                tmp_k_out = np.array((file['sampts_out']))
+                tmp_window = np.array((file['wcmat']))
 
                 self.windows[ell] = {}
                 self.windows[ell]['k_window'] = tmp_k
+                self.windows[ell]['k_window_out'] = tmp_k_out
                 self.windows[ell]['window'] = tmp_window
 
         return self.windows
