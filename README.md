@@ -33,20 +33,27 @@ The code performs the following tasks:
 
 ## Requirements ----> UNDER DEVELOPMENT
 
-- Python 3.7 or higher
+- Python (3.7 < version < 3.12) (if Python > 3.12, tensorflow > 2.16.0 which is incompatible with the current emulator code); 
 - Required Python packages:
   - `numpy`
   - `scipy`
   - `yaml`
   - `pocoMC` (version 1.2.6)
-  - `tensorflow` (version 2.15.0 or higher)
-  - `keras` (version 2.15.0 or higher)
+  - `tensorflow` (version < 2.16.0)
+  - `keras` (version < 2.16.0)
   - `multiprocessing`
+  - `bicker`
 
 You can install the required packages using `pip`:
 
 ```bash
-pip install numpy scipy pyyaml argparse pocomc
+pip install numpy scipy pyyaml argparse pocomc tensorflow==2.15.0 keras==2.15.0
+```
+Then install bicker:
+```bash
+git clone https://github.com/ROEcosmology/BICKER.git
+cd ./BICKER && git restore .
+python -m pip install -vvv -e .
 ```
 
 ---
