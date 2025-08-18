@@ -1,7 +1,7 @@
+import numpy as np
 import argparse
 import os,sys
 import yaml
-import numpy as np
 from time import time
 import pocomc as pc
 import data_loader as dload
@@ -73,10 +73,15 @@ if __name__ == '__main__':
     # CLEANING PARAMETERS #
     #######################
 
-    # Iterate over a copy of the dictionary to avoid modifying it while iterating
+    # # Iterate over a copy of the dictionary to avoid modifying it while iterating
+    # for param, prior_info in list(priors.items()):
+    #    if prior_info['type'] == 'Fix':
+    #        del priors[param]
+
+    parameters_to_be_varied = priors.copy()
     for param, prior_info in list(priors.items()):
         if prior_info['type'] == 'Fix':
-            del priors[param]
+            del parameters_to_be_varied[param]
 
     #############
     # LOAD DATA #

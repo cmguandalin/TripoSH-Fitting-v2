@@ -224,7 +224,6 @@ class PkBkCalculator:
             # n_s was included in the training of the emulator
             if 'n_s' not in pars:
                 # but is not varied in the MCMC analysis
-                
                 if self.ordering == 0:
                     return [pars['omega_cdm'], pars['omega_b'], pars['h'], pars['ln10^{10}A_s'], default_ns]
                 else:
@@ -349,7 +348,7 @@ class PkBkCalculator:
 
         # Get kernels for bispectrum emulator
         self.kernels_k, self.kernels_Bk = self.kernels_from_emulator(pars, l1l2L)
-        self.bk_model = np.zeros(len(self.kernels_Bk['b1_b1_b1']))
+        self.bk_model = np.zeros(len(self.kernels_k))
 
         # Iterate over the kernels to compute the bispectrum model
         for b, values in self.kernels_Bk.items():
@@ -468,6 +467,7 @@ class ModellingFunction:
         Returns:
             np.ndarray: Concatenated model predictions for the specified multipoles.
         """
+
         # Convert the input array of MCMC points to a dictionary for the emulator
         parameters_to_vary = {}
         free_param_names   = [param for param in self.priors if self.priors[param]['type'] != 'Fix']
