@@ -52,7 +52,7 @@ group = [
 group_shot = [
                 'Bshot_b1_b1', 'Bshot_b1_f', 'Bshot_b1_c1', 'Bshot_b1_c2',
                 'Pshot_f_b1', 'Pshot_f_f', 'Pshot_f_c1', 'Pshot_f_c2',
-            ]
+             ]
 
 kernel_name_Bk = [
                     'b1_b1_b1', 'b1_b1_b2','b1_b1_bG2','b1_b1_f','b1_b1_b1_f','b1_b1_f_f',
@@ -307,7 +307,9 @@ class PkBkCalculator:
         fnlloc = pars.get('fnlloc',0.0)
         fnlequi = pars.get('fnlequi',0.0)
         fnlortho = pars.get('fnlortho',0.0)
-        fnlortho_LSS = pars.get('fnlortho_LSS',0.0)
+        for param,_ in list(pars.items()):
+            if param == 'fnlortho_LSS':
+                fnlortho = pars.get('fnlortho_LSS',0.0)                
 
         self.Pstoch = (1 + Pshot + a0 * self.k_pk**2.0) / self.mean_density
         
@@ -358,7 +360,7 @@ class PkBkCalculator:
 
         # Get kernels for bispectrum emulator
         self.kernels_Bk = self.precomputed_kernels[l1l2L]
-        self.bk_model = np.zeros(len(self.kernels_Bk['b1_b1_b1']))
+        self.bk_model = np.zeros(len(self.k_bk))
 
         # Iterate over the kernels to compute the bispectrum model
         for b, values in self.kernels_Bk.items():
@@ -381,9 +383,9 @@ class PkBkCalculator:
                 bias *= fnlloc
             if 'fnlequi' in b:
                 bias *= fnlequi
-            if 'fnlortho' in b:
+            if b.startswith('fnlortho_b') or b.startswith('fnlortho_f'):
                 bias *= fnlortho
-            if 'fnlortho_LSS' in b:
+            if b.startswith('fnlortho_LSS_b') or b.startswith('fnlortho_LSS_f'):
                 bias *= fnlortho_LSS
             
             # Get the bias-weighted kernel
@@ -517,9 +519,9 @@ class PkBkCalculator:
                 bias *= (1 + Pshot) / self.mean_density
             if 'Bshot' in b:
                 bias *= Bshot / self.mean_density
-            if 'fnlequi' in b:
+            if b.startswith('fnlortho_b') or b.startswith('fnlortho_f'):
                 bias *= fnlequi
-            if 'fnlortho' in b:
+            if b.startswith('fnlortho_LSS_b') or b.startswith('fnlortho_LSS_f'):
                 bias *= fnlortho
             
             # Get the bias-weighted kernel
