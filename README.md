@@ -126,7 +126,7 @@ prior:
 To run the code, use the following command:
 
 ```bash
-nohup python -u src/inference.py -config config/example.yml > nohup.out 2>&1 &
+nohup python -u src/inference.py -config config/example.yml -ncpus 8 > nohup.out 2>&1 &
 ```
 or 
 ```bash
