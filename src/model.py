@@ -33,23 +33,30 @@ from time import time
 import os
 import re
 
-group = [
-            ['c2_b2_f', 'c2_b1_b2',  'c2_b1_b1',  'c2_b1_f', 'c2_b1_f', 'c1_b1_b1_f', 
-                'c1_b2_f', 'c1_b1_b2', 'c1_b1_b1', 'c2_b1_b1_f', 'c1_b1_f'],
-            ['c2_b1_f_f', 'c1_f_f', 'c1_f_f_f', 'c2_f_f', 'c2_f_f_f', 'c1_b1_f_f'],
-            ['c1_c1_f_f', 'c2_c2_b1_f',  'c2_c1_b1_f',  'c2_c1_b1', 'c2_c1_b2', 
-                'c2_c2_f_f', 'c1_c1_f', 'c2_c2_b1', 'c2_c2_b2', 'c2_c2_f', 'c2_c1_b1_f', 
-                'c2_c1_f', 'c1_c1_b1_f', 'c1_c1_b1', 'c1_c1_b2', 'c1_c1_f_f'],
-            ['c1_c1_bG2', 'c2_c2_bG2', 'c2_c1_bG2'],
-            ['c1_b1_bG2', 'c1_bG2_f', 'c2_bG2_f', 'c2_b1_bG2'],
-            ['b1_f_f', 'b1_b1_f_f', 'b1_b1_b2', 'b2_f_f', 'b1_b1_b1', 'b1_b1_b1_f', 
-                'b1_b1_f', 'b1_f_f_f', 'f_f_f', 'f_f_f_f', 'b1_b2_f'],
-            ['bG2_f_f', 'b1_b1_bG2', 'b1_bG2_f']
-        ]
+group = [["c2_b2_f", "c2_b1_b2", "c2_b1_b1",
+          "c2_b1_f", "c1_b1_b1_f",
+          "c1_b2_f", "c1_b1_b2", "c1_b1_b1",
+          "c2_b1_b1_f", "c1_b1_f"],
+         ["c2_b1_f_f", "c1_f_f", "c1_f_f_f",
+          "c2_f_f", "c2_f_f_f",
+          "c1_b1_f_f"],
+         ["c1_c1_f_f", "c2_c2_b1_f", "c2_c1_b1_f",
+          "c2_c1_b1", "c2_c1_b2", "c2_c2_f_f",
+          "c1_c1_f", "c2_c2_b1", "c2_c2_b2",
+          "c2_c2_f", "c2_c1_f","c2_c1_f_f",
+          "c1_c1_b1_f", "c1_c1_b1", "c1_c1_b2"],                     
+         ["c1_c1_bG2", "c2_c2_bG2", "c2_c1_bG2"],
+         ["c1_b1_bG2", "c1_bG2_f", "c2_bG2_f",
+          "c2_b1_bG2"],
+         ["b1_f_f", "b1_b1_f_f", "b1_b1_b2",
+          "b2_f_f", "b1_b1_b1", "b1_b1_b1_f",
+          "b1_b1_f", "b1_f_f_f", "f_f_f",
+          "f_f_f_f", "b1_b2_f"],
+         ["bG2_f_f", "b1_b1_bG2", "b1_bG2_f"]]
 
 group_shot = [
                 'Bshot_b1_b1', 'Bshot_b1_f', 'Bshot_b1_c1', 'Bshot_b1_c2',
-                'Pshot_f_b1', 'Pshot_f_f', 'Pshot_f_c1', 'Pshot_f_c2',
+                'Pshot_f_b1', 'Pshot_f_f', 'Pshot_f_c1', 'Pshot_f_c2', 'Pshot_Pshot'
             ]
 
 kernel_name_Bk = [
@@ -63,7 +70,7 @@ kernel_name_Bk = [
                     'c2_c1_bG2','c2_c1_f','c2_c1_b1_f','c2_c1_f_f','c2_c2_b1','c2_c2_b2','c2_c2_bG2',
                     'c2_c2_f','c2_c2_b1_f','c2_c2_f_f',
                     'Bshot_b1_b1', 'Bshot_b1_f', 'Bshot_b1_c1', 'Bshot_b1_c2', 
-                    'Pshot_f_b1', 'Pshot_f_f', 'Pshot_f_c1', 'Pshot_f_c2',
+                    'Pshot_f_b1', 'Pshot_f_f', 'Pshot_f_c1', 'Pshot_f_c2','Pshot_Pshot',
                     'fnlloc_b1_b1_b1','fnlloc_b1_b1_f','fnlloc_b1_f_f','fnlloc_f_f_f',
                     'fnlequi_b1_b1_b1','fnlequi_b1_b1_f','fnlequi_b1_f_f','fnlequi_f_f_f',
                     'fnlortho_b1_b1_b1','fnlortho_b1_b1_f','fnlortho_b1_f_f','fnlortho_f_f_f',
@@ -375,8 +382,8 @@ class PkBkCalculator:
             # Get the bias-weighted kernel
             self.bk_model += bias * values
         
-        if Pshot != 0: 
-            self.bk_model += ((1+Pshot)/self.mean_density)**2
+        #if Pshot != 0: 
+        #    self.bk_model += ((1+Pshot)/self.mean_density)**2
 
         self.interp_function = interp1d(self.kernels_k, self.bk_model, kind='cubic', fill_value='extrapolate')
         

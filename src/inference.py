@@ -9,7 +9,10 @@ import covariance_loader as cload
 import likelihood as clike
 import model
 from datetime import datetime
-from multiprocessing import Pool
+#from multiprocessing import Pool
+import multiprocessing as mp
+
+ctx = mp.get_context('fork')
 
 os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
 sys.stderr = sys.stdout
@@ -106,7 +109,7 @@ if __name__ == '__main__':
     # MODEL VECTOR #
     ################
     # Initialise the emulator
-    calculator = model.PkBkCalculator(multipoles, mean_density, redshift, cache_path, fixed_params=['n_s'], rescale_kernels=True, ordering=1)
+    calculator = model.PkBkCalculator(multipoles, mean_density, redshift, cache_path, fixed_params=None, rescale_kernels=True, ordering=1)
     model_function = model.ModellingFunction(priors, data, calculator, multipoles)
 
     ##############
@@ -137,7 +140,7 @@ if __name__ == '__main__':
     print(f'Starting sampling at {datetime.now()} with {ncpus} CPUs. \n')
 
     if ncpus > 1:
-        with Pool(ncpus) as pool:
+        with ctx.Pool(ncpus) as pool:
             sampler = pc.Sampler(
                 prior=prior,
                 likelihood=likelihood_wrapper,
