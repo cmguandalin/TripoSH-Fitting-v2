@@ -38,8 +38,6 @@ The code performs the following tasks:
   - `scipy` (1.14.0)
   - `yaml`
   - `pocoMC` (version 1.2.6)
-  - `tensorflow` (version 2.15.0 or higher)
-  - `keras` (version 2.15.0 or higher)
   - `multiprocessing`
   - CLASS-PT (used for power spectrum -- no cosmology being varied at the moment)
 
