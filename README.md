@@ -110,6 +110,10 @@ prior:
     lim: [value]
 ```
 
+### Data and covariance format
+- For each multipole, there must be an associated data file with shape N_kbins x 2 (k, multipole). Check a file in the data/ folder available for an example. Note: if your data is not in this format, pre-process it.
+- For the covariance, there is an .ipynb available stating the keys required for the covariance.npy dictionary.
+
 ### Key Configuration Parameters
 
 - `data_path`: Path to the directory containing the data files.
